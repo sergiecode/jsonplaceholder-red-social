@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSONPlaceholder Example</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>JSONPlaceholder Example</h1>
+
+  <h2>GET</h2>
+  <button onclick="getData()">Get Data</button>
+  <ul id="postList"></ul>
+  
+  <h2>POST</h2>
+  <form id="postForm" onsubmit="event.preventDefault(); postData()">
+    <label for="postTitle">Title:</label>
+    <input type="text" id="postTitle" required>
+    <label for="postBody">Body:</label>
+    <textarea id="postBody" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    const apiUrl = 'https://jsonplaceholder.typicode.com/posts';
+    let posts = [];
+
+    function getData() {
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          posts = data;
+          renderPostList();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function renderPostList() {
+      const postList = document.getElementById('postList');
+      postList.innerHTML = '';
+
+      posts.forEach(post => {
+        const listItem = document.createElement('li');
+        listItem.classList.add('postItem');
+        listItem.innerHTML = `
+          <strong>${post.title}</strong>
+          <p>${post.body}</p>
+          <button onclick="editPost(${post.id})">Edit</button>
+          <button onclick="deleteData(${post.id})">Delete</button>
+          <div id="editForm-${post.id}" class="editForm" style="display: none;">
+            <label for="editTitle">Title:</label>
+            <input type="text" id="editTitle-${post.id}" value="${post.title}" required>
+            <label for="editBody">Body:</label>
+            <textarea id="editBody-${post.id}" required>${post.body}</textarea>
+            <button onclick="updateData(${post.id})">Update</button>
+          </div>
+        `;
+        postList.appendChild(listItem);
+      });
+    }
+
+    function postData() {
+      const postTitle = document.getElementById('postTitle').value;
+      const postBody = document.getElementById('postBody').value;
+
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: postTitle,
+          body: postBody,
+          userId: 1
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          posts.push(data);
+          renderPostList();
+          document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function editPost(postId) {
+      // Toggle the visibility of the edit form for the selected post
+      const editForm = document.getElementById(`editForm-${postId}`);
+      editForm.style.display = (editForm.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function updateData(postId) {
+      const editTitle = document.getElementById(`editTitle-${postId}`).value;
+      const editBody = document.getElementById(`editBody-${postId}`).value;
+
+      fetch(apiUrl + '/' + postId, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: postId,
+          title: editTitle,
+          body: editBody,
+          userId: 1
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          const index = posts.findIndex(post => post.id === data.id);
+          if (index !== -1) {
+            posts[index] = data;
+          }
+          renderPostList();
+          document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        })
+        .catch(error => console.error('Error:', error));
+
+      // Hide the edit form after updating
+      document.getElementById(`editForm-${postId}`).style.display = 'none';
+    }
+
+    function deleteData(postId) {
+      fetch(apiUrl + '/' + postId, {
+        method: 'DELETE'
+      })
+        .then(response => {
+          if (response.ok) {
+            posts = posts.filter(post => post.id !== postId);
+            renderPostList();
+            return response.text();
+          } else {
+            throw new Error('Delete request failed');
+          }
+        })
+        .then(data => {
+          document.getElementById('output').innerText = data;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+  </script>
+</body>
+</html>
